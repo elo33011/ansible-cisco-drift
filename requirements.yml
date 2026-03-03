@@ -1,0 +1,6 @@
+# Requirements file for Ansible Collections
+
+# This file specifies the Ansible collections required for Cisco IOS-XE
+
+collections:
+  - ansible.network.cisco_ios_xe: ^1.0.0
