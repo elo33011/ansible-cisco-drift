@@ -1,0 +1,61 @@
+---
+- name: Detect Configuration Drift on Cisco IOS-XE Devices
+  hosts: cisco_iosxe
+  gather_facts: no
+  vars:
+    drift_report_dir: "./drift_reports"
+    baseline_dir: "./baselines"
+  
+  tasks:
+    - name: Create drift report directory
+      ansible.builtin.file:
+        path: "{{ drift_report_dir }}"
+        state: directory
+      run_once: yes
+      delegate_to: localhost
+
+    - name: Create baseline directory
+      ansible.builtin.file:
+        path: "{{ baseline_dir }}"
+        state: directory
+      run_once: yes
+      delegate_to: localhost
+
+    - name: Gather running configuration from device
+      cisco.ios.ios_command:
+        commands:
+          - "show running-config"
+      register: running_config
+
+    - name: Load baseline configuration from file
+      ansible.builtin.slurp:
+        src: "{{ baseline_dir }}/{{ inventory_hostname }}_baseline.cfg"
+      register: baseline_config
+      ignore_errors: yes
+
+    - name: Compare configurations and detect drift
+      ansible.builtin.set_fact:
+        config_drift_detected: "{{ running_config.stdout[0] != baseline_config.content | default('') | b64decode }}"
+        running_config_text: "{{ running_config.stdout[0] }}"
+        baseline_config_text: "{{ baseline_config.content | default('') | b64decode }}"
+
+    - name: Generate drift report
+      ansible.builtin.template:
+        src: drift_report.j2
+        dest: "{{ drift_report_dir }}/{{ inventory_hostname }}_drift_report.txt"
+      vars:
+        drift_detected: "{{ config_drift_detected }}"
+
+    - name: Log drift detection results
+      ansible.builtin.lineinfile:
+        path: "{{ drift_report_dir }}/drift_detection.log"
+        line: "[{{ ansible_date_time.iso8601 }}] {{ inventory_hostname }}: Drift {{ 'DETECTED' if config_drift_detected else 'NOT detected' }}"
+        create: yes
+      delegate_to: localhost
+
+    - name: Display drift detection summary
+      ansible.builtin.debug:
+        msg: |
+          Device: {{ inventory_hostname }}
+          Drift Detected: {{ config_drift_detected }}
+          Report Location: {{ drift_report_dir }}/{{ inventory_hostname }}_drift_report.txt
