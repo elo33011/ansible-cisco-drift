@@ -1,0 +1,41 @@
+================================================================================
+CISCO IOS-XE CONFIGURATION DRIFT REPORT
+================================================================================
+Device        : {{ inventory_hostname }}
+Report Time   : {{ now(utc=True, fmt='%Y-%m-%d %H:%M:%S UTC') }}
+Baseline File : {{ baseline_dir }}/{{ inventory_hostname }}_baseline.cfg
+Report File   : {{ drift_report_dir }}/{{ inventory_hostname }}_drift_report.txt
+--------------------------------------------------------------------------------
+
+{% if not baseline_config_text %}
+STATUS: ⚠  NO BASELINE FOUND
+  No baseline configuration file exists for this device.
+  To create one, save the current running-config:
+
+    cp <(ansible -i inventory/inventory.ini {{ inventory_hostname }} \
+         -m cisco.ios.ios_command \
+         -a "commands='show running-config'" \
+         | grep -v '^$') \
+       baselines/{{ inventory_hostname }}_baseline.cfg
+
+{% elif drift_detected | bool %}
+STATUS: ✗  DRIFT DETECTED
+
+The running configuration does NOT match the stored baseline.
+Review the diff below and remediate any unauthorized changes.
+
+--- BASELINE (expected) ---
+{{ baseline_config_text }}
+
+--- RUNNING (actual) ---
+{{ running_config_text }}
+
+{% else %}
+STATUS: ✓  NO DRIFT DETECTED
+
+The running configuration matches the stored baseline exactly.
+
+{% endif %}
+================================================================================
+END OF REPORT
+================================================================================

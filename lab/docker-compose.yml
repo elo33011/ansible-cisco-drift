@@ -1,0 +1,70 @@
+---
+# Virtual Cisco IOS-XE lab for ansible-cisco-drift testing.
+#
+# Three simulated routers:
+#   router1  - CLEAN: running config matches baseline (no drift expected)
+#   router2  - DRIFTED: running config diverges from baseline (drift expected)
+#   router3  - NEW: no baseline file exists (will show as drift/unmanaged)
+#
+# All routers share the same SSH credentials:
+#   user: admin  /  password: cisco  /  enable: cisco
+#
+# Ports exposed on localhost:
+#   router1 -> localhost:2221
+#   router2 -> localhost:2222
+#   router3 -> localhost:2223
+
+version: "3.8"
+
+services:
+  router1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mock-cisco-iosxe:latest
+    container_name: lab-router1
+    environment:
+      DEVICE_HOSTNAME: router1
+      SSH_USER: admin
+      SSH_PASSWORD: cisco
+      ENABLE_PASSWORD: cisco
+      CONFIG_FILE: /configs/router1.cfg
+    volumes:
+      - ./configs:/configs:ro
+    ports:
+      - "2221:22"
+    restart: unless-stopped
+
+  router2:
+    image: mock-cisco-iosxe:latest
+    container_name: lab-router2
+    depends_on:
+      - router1  # ensure image is built first
+    environment:
+      DEVICE_HOSTNAME: router2
+      SSH_USER: admin
+      SSH_PASSWORD: cisco
+      ENABLE_PASSWORD: cisco
+      CONFIG_FILE: /configs/router2.cfg
+    volumes:
+      - ./configs:/configs:ro
+    ports:
+      - "2222:22"
+    restart: unless-stopped
+
+  router3:
+    image: mock-cisco-iosxe:latest
+    container_name: lab-router3
+    depends_on:
+      - router1
+    environment:
+      DEVICE_HOSTNAME: router3
+      SSH_USER: admin
+      SSH_PASSWORD: cisco
+      ENABLE_PASSWORD: cisco
+      CONFIG_FILE: /configs/router3.cfg
+    volumes:
+      - ./configs:/configs:ro
+    ports:
+      - "2223:22"
+    restart: unless-stopped
