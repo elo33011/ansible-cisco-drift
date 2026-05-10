@@ -153,13 +153,14 @@ class CiscoSession(asyncssh.SSHServerSession):
 
 
 class CiscoServer(asyncssh.SSHServer):
-    """Authenticates clients and spawns CiscoSession instances."""
+    """Accepts all connections – this is a lab mock, not a production device."""
 
     def begin_auth(self, username):
-        return True  # require password auth
-
-    def password_auth_requested(self, username, password):
-        return username == SSH_USER and password == SSH_PASSWORD
+        # Return False = SSH "none" auth; the server accepts the connection
+        # immediately without a password challenge.  This sidesteps the
+        # paramiko <-> asyncssh auth-method negotiation entirely.
+        # The lab is testing drift detection logic, not SSH authentication.
+        return False
 
     def session_requested(self):
         return CiscoSession()
