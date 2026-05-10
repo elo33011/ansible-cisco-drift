@@ -1,0 +1,7 @@
+---
+# Credentials for the virtual lab devices.
+# All three mock routers share the same credentials.
+# Override per-host in host_vars/ for real environments.
+ansible_user: admin
+ansible_password: cisco
+ansible_become_password: cisco

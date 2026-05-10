@@ -35,7 +35,7 @@
 
     - name: Compare configurations and detect drift
       ansible.builtin.set_fact:
-        config_drift_detected: "{{ running_config.stdout[0] != baseline_config.content | default('') | b64decode }}"
+        config_drift_detected: "{{ running_config.stdout[0] | trim != baseline_config.content | default('') | b64decode | trim }}"
         running_config_text: "{{ running_config.stdout[0] }}"
         baseline_config_text: "{{ baseline_config.content | default('') | b64decode }}"
 
@@ -49,7 +49,7 @@
     - name: Log drift detection results
       ansible.builtin.lineinfile:
         path: "{{ drift_report_dir }}/drift_detection.log"
-        line: "[{{ ansible_date_time.iso8601 }}] {{ inventory_hostname }}: Drift {{ 'DETECTED' if config_drift_detected else 'NOT detected' }}"
+        line: "[{{ now(utc=True, fmt='%Y-%m-%dT%H:%M:%SZ') }}] {{ inventory_hostname }}: Drift {{ 'DETECTED' if config_drift_detected else 'NOT detected' }}"
         create: yes
       delegate_to: localhost
 
