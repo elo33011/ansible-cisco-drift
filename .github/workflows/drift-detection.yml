@@ -24,8 +24,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Ansible
-        run: pip install --upgrade ansible
+      - name: Install Ansible and Python dependencies
+        run: pip install --upgrade -r pip-requirements.txt
 
       - name: Install required Ansible collections
         run: ansible-galaxy collection install -r requirements.yml
