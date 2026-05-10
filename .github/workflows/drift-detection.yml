@@ -54,6 +54,16 @@ jobs:
           done
           echo "All SSH ports ready."
 
+      # ── smoke test ───────────────────────────────────────────────────────
+      # Verify each mock device is up and returning a valid config BEFORE
+      # Ansible connects. Uses the same paramiko library that network_cli
+      # uses so it exercises the same SSH path.
+      # NOTE: the mock is a Python asyncssh server, not a real IOS image.
+      #       It speaks the Cisco IOS-XE CLI protocol over SSH and serves
+      #       the configs from lab/configs/*.cfg.
+      - name: Smoke test - verify mock devices respond over SSH
+        run: python3 lab/smoke_test.py
+
       # ── playbook ──────────────────────────────────────────────────────────
       - name: Run detect_drift.yml
         run: ansible-playbook playbooks/detect_drift.yml -vvvv
