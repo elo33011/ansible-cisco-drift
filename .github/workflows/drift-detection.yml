@@ -1,0 +1,84 @@
+---
+name: Cisco Drift Detection
+
+on:
+  push:
+    branches: ["main", "claude/build-cisco-virtual-lab-IkBwU"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:   # allow manual runs from the GitHub UI
+
+jobs:
+  drift-detection:
+    name: Run drift playbook against virtual lab
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── checkout ─────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── python / ansible ─────────────────────────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: pip install --upgrade ansible
+
+      - name: Install required Ansible collections
+        run: ansible-galaxy collection install -r requirements.yml
+
+      # ── virtual lab ───────────────────────────────────────────────────────
+      - name: Build and start mock Cisco devices
+        run: docker compose -f lab/docker-compose.yml up -d --build
+
+      - name: Wait for SSH ports to be ready (2221-2223)
+        run: |
+          for port in 2221 2222 2223; do
+            echo "Waiting for port ${port}..."
+            python3 -c "
+          import socket, sys, time
+          port = ${port}
+          for _ in range(30):
+              try:
+                  socket.create_connection(('127.0.0.1', port), timeout=2).close()
+                  print(f'Port {port} ready')
+                  sys.exit(0)
+              except OSError:
+                  time.sleep(1)
+          print(f'Timed out waiting for port {port}', file=sys.stderr)
+          sys.exit(1)
+          "
+          done
+
+      # ── playbook ──────────────────────────────────────────────────────────
+      - name: Run detect_drift.yml
+        run: ansible-playbook playbooks/detect_drift.yml -v
+
+      # ── results ───────────────────────────────────────────────────────────
+      - name: Show drift detection log
+        if: always()
+        run: |
+          echo "── drift_detection.log ──────────────────────────────────"
+          cat drift_reports/drift_detection.log 2>/dev/null || echo "(log not created)"
+          echo ""
+          echo "── per-device reports ───────────────────────────────────"
+          for f in drift_reports/*.txt; do
+            [ -f "$f" ] || continue
+            echo ""; echo "=== $f ==="; cat "$f"
+          done
+
+      - name: Upload drift reports as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-reports
+          path: drift_reports/
+          if-no-files-found: warn
+
+      # ── cleanup ───────────────────────────────────────────────────────────
+      - name: Stop virtual lab containers
+        if: always()
+        run: docker compose -f lab/docker-compose.yml down
