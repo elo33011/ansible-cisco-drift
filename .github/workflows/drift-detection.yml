@@ -56,7 +56,7 @@ jobs:
 
       # ── playbook ──────────────────────────────────────────────────────────
       - name: Run detect_drift.yml
-        run: ansible-playbook playbooks/detect_drift.yml -v
+        run: ansible-playbook playbooks/detect_drift.yml -vvvv
 
       # ── results ───────────────────────────────────────────────────────────
       - name: Show drift detection log
