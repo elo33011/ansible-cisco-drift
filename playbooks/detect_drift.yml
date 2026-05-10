@@ -27,11 +27,18 @@
           - "show running-config"
       register: running_config
 
+    - name: Check if baseline file exists
+      ansible.builtin.stat:
+        path: "{{ baseline_dir }}/{{ inventory_hostname }}_baseline.cfg"
+      register: baseline_stat
+      delegate_to: localhost
+
     - name: Load baseline configuration from file
       ansible.builtin.slurp:
         src: "{{ baseline_dir }}/{{ inventory_hostname }}_baseline.cfg"
       register: baseline_config
-      ignore_errors: yes
+      when: baseline_stat.stat.exists
+      delegate_to: localhost
 
     - name: Compare configurations and detect drift
       ansible.builtin.set_fact:
