@@ -96,6 +96,13 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
                 config = load_running_config()
                 process.stdout.write(f"\r\n{config}\r\n{prompt()}")
 
+            elif lower == "show privilege":
+                # cisco.ios terminal plugin runs this after 'enable' to confirm
+                # the session is at privilege level 15.  Must match exactly.
+                process.stdout.write(
+                    f"\r\nCurrent privilege level is 15\r\n{prompt()}"
+                )
+
             elif lower == "show version":
                 process.stdout.write(
                     "\r\nCisco IOS XE Software, Version 17.03.01a\r\n"
