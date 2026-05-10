@@ -45,6 +45,7 @@
         dest: "{{ drift_report_dir }}/{{ inventory_hostname }}_drift_report.txt"
       vars:
         drift_detected: "{{ config_drift_detected }}"
+      delegate_to: localhost
 
     - name: Log drift detection results
       ansible.builtin.lineinfile:
