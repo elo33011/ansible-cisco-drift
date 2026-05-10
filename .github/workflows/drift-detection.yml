@@ -36,22 +36,23 @@ jobs:
 
       - name: Wait for SSH ports to be ready (2221-2223)
         run: |
+          # Give the containers a moment to start their processes
+          sleep 5
           for port in 2221 2222 2223; do
             echo "Waiting for port ${port}..."
-            python3 -c "
-          import socket, sys, time
-          port = ${port}
-          for _ in range(30):
-              try:
-                  socket.create_connection(('127.0.0.1', port), timeout=2).close()
-                  print(f'Port {port} ready')
-                  sys.exit(0)
-              except OSError:
-                  time.sleep(1)
-          print(f'Timed out waiting for port {port}', file=sys.stderr)
-          sys.exit(1)
-          "
+            for attempt in $(seq 1 30); do
+              if bash -c "echo > /dev/tcp/127.0.0.1/${port}" 2>/dev/null; then
+                echo "  port ${port} is up (attempt ${attempt})"
+                break
+              fi
+              if [ "$attempt" = "30" ]; then
+                echo "ERROR: port ${port} did not become ready in time."
+                exit 1
+              fi
+              sleep 1
+            done
           done
+          echo "All SSH ports ready."
 
       # ── playbook ──────────────────────────────────────────────────────────
       - name: Run detect_drift.yml
@@ -77,6 +78,17 @@ jobs:
           name: drift-reports
           path: drift_reports/
           if-no-files-found: warn
+
+      # ── debug: show container logs if something failed ───────────────────
+      - name: Dump container logs on failure
+        if: failure()
+        run: |
+          echo "── router1 logs ─────────────────────────────────────────"
+          docker compose -f lab/docker-compose.yml logs router1 || true
+          echo "── router2 logs ─────────────────────────────────────────"
+          docker compose -f lab/docker-compose.yml logs router2 || true
+          echo "── router3 logs ─────────────────────────────────────────"
+          docker compose -f lab/docker-compose.yml logs router3 || true
 
       # ── cleanup ───────────────────────────────────────────────────────────
       - name: Stop virtual lab containers

@@ -51,7 +51,8 @@ class CiscoSession(asyncssh.SSHServerSession):
     def connection_made(self, chan):
         self._chan = chan
 
-    def pty_requested(self, term_type, term_size, term_modes):
+    def pty_requested(self, term_type, term_modes, term_width, term_height,
+                      term_pixwidth, term_pixheight):
         return True
 
     def shell_requested(self):
@@ -172,17 +173,18 @@ async def run():
         host_key = asyncssh.generate_private_key("ssh-rsa", key_size=2048)
         host_key.write_private_key(key_path)
 
-    await asyncssh.create_server(
+    server = await asyncssh.create_server(
         CiscoServer,
         host="",
         port=SSH_PORT,
         server_host_keys=[host_key],
     )
+    _ = server  # keep reference so GC does not close the server
     print(
         f"[*] Mock Cisco IOS-XE  hostname={HOSTNAME}  port={SSH_PORT}  config={CONFIG_FILE}",
         flush=True,
     )
-    await asyncio.get_event_loop().create_future()  # run forever
+    await asyncio.get_running_loop().create_future()  # run forever
 
 
 if __name__ == "__main__":
