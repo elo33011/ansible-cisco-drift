@@ -87,7 +87,9 @@ def smoke_test(name, port):
         return True
 
     except Exception as exc:
-        print(f"{FAIL} Error during shell interaction: {exc}")
+        import traceback
+        traceback.print_exc()
+        print(f"{FAIL} Error during shell interaction: {type(exc).__name__}: {exc}")
         return False
     finally:
         client.close()
