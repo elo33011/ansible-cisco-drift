@@ -1,0 +1,65 @@
+---
+# demo_callback.yml
+#
+# PURPOSE
+#   Demonstrates all major callback plugin hooks without needing
+#   a live Cisco device.  Every hook listed in task_timer.py and
+#   drift_reporter.py will fire at least once during this play.
+#
+# HOW TO RUN
+#   ansible-playbook playbooks/demo_callback.yml
+#
+# WHAT TO LOOK FOR
+#   - The drift_reporter banner at the top (v2_playbook_on_start)
+#   - Per-task colour output from drift_reporter (v2_runner_on_*)
+#   - The TASK TIMING SUMMARY table from task_timer (v2_playbook_on_stats)
+#   - The DRIFT REPORTER SUMMARY banner (v2_playbook_on_stats)
+#   - drift_reports/callback_summary.json written to disk
+
+- name: Callback Plugin Demo (runs on localhost)
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+
+    # ---- triggers v2_runner_on_ok (changed=False) ----
+    - name: Successful task – no change
+      ansible.builtin.debug:
+        msg: "This task always succeeds without making any change."
+
+    # ---- triggers v2_runner_on_ok (changed=True) ----
+    - name: Task that reports changed
+      ansible.builtin.command:
+        cmd: echo "simulating a configuration push"
+      changed_when: true
+
+    # ---- triggers v2_runner_on_skipped ----
+    - name: Skipped task (when condition is false)
+      ansible.builtin.debug:
+        msg: "You will never see this message."
+      when: false
+
+    # ---- triggers v2_runner_on_failed (with ignore_errors) ----
+    - name: Deliberately failing task (ignored so playbook continues)
+      ansible.builtin.command:
+        cmd: "false"
+      ignore_errors: yes
+
+    # ---- triggers drift_reporter's drift-detection logic ----
+    # The task name contains 'detect', which makes drift_reporter
+    # inspect result._result['ansible_facts']['config_drift_detected'].
+    - name: Detect drift – simulate baseline comparison
+      ansible.builtin.set_fact:
+        config_drift_detected: true
+
+    # ---- shows the drift flag value ----
+    - name: Display drift result
+      ansible.builtin.debug:
+        msg: >-
+          config_drift_detected = {{ config_drift_detected }}
+          (drift_reporter already logged this above)
+
+    # ---- simulate a clean host by resetting the flag ----
+    - name: Detect drift – simulate no drift on second check
+      ansible.builtin.set_fact:
+        config_drift_detected: false
