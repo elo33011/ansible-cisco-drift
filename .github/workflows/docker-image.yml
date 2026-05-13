@@ -2,17 +2,33 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "claude/ansible-callback-plugin-ib5LN" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:   # lets you trigger it manually from the Actions tab
 
 jobs:
 
-  build:
-
+  build-and-run:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build the Docker image
+        run: docker build . --file Dockerfile --tag ansible-callback-demo:ci
+
+      - name: Run callback plugin demo playbook
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/drift_reports:/ansible/drift_reports" \
+            ansible-callback-demo:ci \
+            playbooks/demo_callback.yml
+
+      - name: Upload drift report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: callback-summary
+          path: drift_reports/callback_summary.json
+          if-no-files-found: warn
