@@ -1,0 +1,20 @@
+# Generated candidate snapshots
+snapshots/candidate-*/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Reports output
+reports/*.csv
+reports/*.html
+
+# OS
+.DS_Store

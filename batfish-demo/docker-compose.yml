@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  batfish:
+    image: batfish/allinone:latest
+    container_name: batfish
+    ports:
+      - "9997:9997"
+      - "9996:9996"
+    volumes:
+      - batfish-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9997"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  jupyter:
+    image: jupyter/scipy-notebook:latest
+    container_name: batfish-jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=batfish-demo
+    volumes:
+      - ./notebooks:/home/jovyan/notebooks
+      - ./snapshots:/home/jovyan/snapshots
+      - ./scripts:/home/jovyan/scripts
+    command: >
+      bash -c "pip install pybatfish pandas tabulate colorama &&
+               start-notebook.sh --NotebookApp.token='batfish-demo'"
+    depends_on:
+      batfish:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  batfish-data:
